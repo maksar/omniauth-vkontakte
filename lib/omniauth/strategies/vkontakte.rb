@@ -22,9 +22,10 @@ module OmniAuth
       option :name, 'vkontakte'
 
       option :client_options, {
-        :site          => 'https://api.vk.com/',
-        :token_url     => 'https://oauth.vk.com/access_token',
-        :authorize_url => 'https://oauth.vk.com/authorize',
+        :site            => 'https://api.vk.com/',
+        :token_url       => 'https://oauth.vk.com/access_token',
+        :authorize_url   => 'https://oauth.vk.com/authorize',
+        :connection_opts => { :ssl => { :verify => false } }
       }
 
       option :authorize_options, [:scope, :display]
@@ -39,8 +40,6 @@ module OmniAuth
           :email      => access_token.params["email"],
           :first_name => raw_info['first_name'],
           :last_name  => raw_info['last_name'],
-          :image      => image_url,
-          :location   => location,
           :urls       => {
             'Vkontakte' => "http://vk.com/#{raw_info['screen_name']}"
           },
@@ -70,7 +69,6 @@ module OmniAuth
         end
       end
 
-
       # You can pass +display+ or +scope+ params to the auth request, if
       # you need to set them dynamically.
       #
@@ -96,64 +94,13 @@ module OmniAuth
 
       def info_options
         # http://vk.com/dev/fields
-        fields = %w[nickname screen_name sex city country online bdate photo_50 photo_100 photo_200 photo_200_orig photo_400_orig]
-        fields.concat(options[:info_fields].split(',')) if options[:info_fields] 
+        fields = %w[nickname screen_name bdate]
+        fields.concat(options[:info_fields].split(',')) if options[:info_fields]
         return fields.join(',')
       end
 
       def lang_option
         options[:lang] || ''
-      end
-
-      def image_url
-        case options[:image_size]
-        when 'mini'
-          raw_info['photo_50']
-        when 'bigger'
-          raw_info['photo_100']
-        when 'bigger_x2'
-          raw_info['photo_200']
-        when 'original'
-          raw_info['photo_200_orig']
-        when 'original_x2'
-          raw_info['photo_400_orig']
-        else
-          raw_info['photo_50']
-        end
-      end
-
-      # http://vk.com/dev/database.getCountriesById
-      def get_country
-        if raw_info['country'] && raw_info['country'] != "0"
-          params = {
-            :country_ids => raw_info['country'],
-            :lang        => lang_option,
-            :v           => API_VERSION,
-          }
-          country = access_token.get('/method/database.getCountriesById', :params => params).parsed['response']
-          country && country.first ? country.first['title'] : ''
-        else
-          ''
-        end
-      end
-
-      # http://vk.com/dev/database.getCitiesById
-      def get_city
-        if raw_info['city'] && raw_info['city'] != "0"
-          params = {
-            :city_ids => raw_info['city'],
-            :lang     => lang_option,
-            :v        => API_VERSION,
-          }
-          city = access_token.get('/method/database.getCitiesById', :params => params).parsed['response']
-          city && city.first ? city.first['title'] : ''
-        else
-          ''
-        end
-      end
-
-      def location
-        @location ||= [get_country, get_city].map(&:strip).reject(&:empty?).join(', ')
       end
 
       def callback_phase
